@@ -8,9 +8,12 @@ def get_index (dic, key):
     if key in dic.keys():
         index = dic[key]
     else:
-        dic[key] = len(dic)
-        index = len(dic)
+        l = len(dic)
+        dic[key] = l
+        dic[l] = key
+        index = l
     return index
+
 
 
 def create_row(line):
