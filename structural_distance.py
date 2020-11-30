@@ -182,21 +182,15 @@ def get_ordered_degree_seq(adjacency, neighbor, memo = {}):
 def get_structural_distance(adjacency, u, v, k, k_hop_u = None, k_hop_v = None):
     if k_hop_u == None:
         k_hop_u = get_k_hop_neighborhood(adjacency, u, k)
-        print('k_hop_u',int(start-time.time()))
     if k_hop_v == None:
         k_hop_v = get_k_hop_neighborhood(adjacency, v, k)
-        print('k_hop_v',int(start-time.time()))
     
     memo = {}
     seq_u = get_ordered_degree_seq(adjacency, k_hop_u[k], memo = memo)
     seq_v = get_ordered_degree_seq(adjacency, k_hop_v[k], memo = memo)
-    print(seq_u)
-    print(seq_v)
     
-    
-    print('k',int(start-time.time()))
     dist = DTW(seq_u, seq_v)
-    print('\t k DTW',dist,int(start-time.time()))
+    
     if k == 0:
         return dist
     return dist + get_structural_distance(adjacency, u, v, k-1, k_hop_u, k_hop_v)   
