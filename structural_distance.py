@@ -215,7 +215,8 @@ def main():
     
     adjacency = generate_adjacency_matrix(edges, num_node)
     
-    get_structural_distance(adjacency, u, v, k)
+    dist = get_structural_distance(adjacency, u, v, k)
+    print(dist)
 
 if __name__ == '__main__':
     main()
