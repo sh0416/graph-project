@@ -8,7 +8,7 @@ def get_index (dic, key):
     if key in dic.keys():
         index = dic[key]
     else:
-        l = len(dic)
+        l = len(dic)/2
         dic[key] = l
         dic[l] = key
         index = l
