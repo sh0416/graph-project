@@ -4,13 +4,13 @@ import json
 import argparse
 from tqdm import tqdm
 
-def get_index (node2index, key, final_index):    
-    if key in node2index.keys():
-        index = node2index[key]
+def get_index (dic, key):    
+    if key in dic.keys():
+        index = dic[key]
     else:
-        node2index[key] = final_index
-        index = final_index
-    return node2index, index, final_index + 1
+        dic[key] = len(dic)
+        index = len(dic)
+    return index
 
 
 def create_row(line):
