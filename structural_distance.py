@@ -96,11 +96,11 @@ def generate_adjacency_matrix(edges, size):
 
 
 def load():
-    file_path = './edges.csv'
     edges = []
-    with open(file_path, 'r') as f: 
-        for line in tqdm(f, desc="load edges"):
-            [p, a, l] = line.replace('\n','').split(',')
+    with open("edges.csv", 'r', newline='', encoding='utf8') as f:
+        reader = csv.reader(f)
+        for row in tqdm(reader, desc="load edge"):
+            [p, a, l] = row
             edges.append((int(float(p)), int(float(a)), int(float(l))))
     # load dict
     with open('node2index.pickle', 'rb') as fr:
