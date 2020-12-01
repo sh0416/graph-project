@@ -10,72 +10,15 @@ import preprocess
 from scipy.sparse import csr_matrix
 
 
-"""
-The part below needs discussion.
-"""
-#######################################################################
+def load():
+    with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
+        reader = csv.reader(f)
+        mapping = {row[1]: int(row[0]) for row in tqdm(reader, desc="load node")}
 
-def get_index (dic, key):    
-    if key in dic.keys():
-        index = dic[key]
-    else:
-        l = len(dic)/2
-        dic[key] = l
-        dic[l] = key
-        index = l
-    return index
-
-
-def create_row(line):
-    """
-    :param line:
-    :type line: str
-    :return: {"authors": list(str), "id": str}
-    :rtype:
-    """
-    row = json.loads(line)
-    return {"authors": row.get("authors"), "id": row["id"]}
-
-
-def process_json2 (file_paths):
-    dic = {}
-    edges = []
-    for file_path in file_paths:
-        with open(file_path, 'r') as f: 
-            data = list(filter(lambda x : x["authors"] is not None, (create_row(line) for line in tqdm(f, desc="load file"))))
-
-        for row in tqdm(data, desc="extract edge information"):
-            row["id"] = get_index (dic, row["id"])
-            for i in range(len(row["authors"])):
-                row["authors"][i] = get_index (dic, row["authors"][i])
-            num_authors = len(row["authors"])
-            if num_authors == 1:
-                edges.append((row["id"], row["authors"][0], 1))
-            elif num_authors == 2:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 0))
-            elif num_authors == 3:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 2))
-                edges.append((row["id"], row["authors"][2], 0))
-            else:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 2))
-                for a in row["authors"][2:-1]:
-                    edges.append((row["id"], a, 3))
-                edges.append((row["id"], row["authors"][-1], 0))
-
-    with open("edges.csv", 'w', newline='', encoding='utf8') as f:
-        writer = csv.writer(f)
-        writer.writerows(tqdm(edges, desc="save to csv"))
-        
-    with open('node2index.pickle','wb') as fw:
-        pickle.dump(dic, fw)
-
-###################################################################################################################
-"""
-The part above needs discussion.
-"""
+    with open('edges.csv', 'r', newline='', encoding='utf8') as f: 
+        reader = csv.reader(f)
+        edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader, desc="load edge")]
+    return edges
 
 
 def generate_adjacency_matrix(edges, size):
@@ -108,22 +51,13 @@ def get_node_degree (edges):
             dic[a]= 1
     return dic
 
-def load():
-    with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
-        reader = csv.reader(f)
-        mapping = {row[1]: int(row[0]) for row in tqdm(reader)}
-
-    with open('edges.csv', 'r', newline='', encoding='utf8') as f: 
-        reader = csv.reader(f)
-        edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader)]
-    return edges
-
 
 class StructuralDistance:
     def __init__(self, adj, deg, k):
         self.adjacency = adj
         self.node_degree = deg
         self.k = k
+        self.k_hop = {}
     
     
     def get_neighborhood(self, v):
@@ -135,6 +69,10 @@ class StructuralDistance:
     output[n]: n hop neighborhood
     """
     def get_k_hop_neighborhood(self, v):
+        try:
+            return self.k_hop[v]
+        except:
+            pass
         k_hop_neighborhood = {0: set([v])}
         all_neighborhood = set([v])
         for i in range(self.k):
@@ -147,7 +85,9 @@ class StructuralDistance:
             if len(k_hop_neighborhood[i+1]) == 0:
                 for j in range(i,self.k):
                     k_hop_neighborhood[j+1] = set()
+                self.k_hop[v] = k_hop_neighborhood
                 return k_hop_neighborhood
+        self.k_hop[v] = k_hop_neighborhood    
         return k_hop_neighborhood
 
 
@@ -203,28 +143,21 @@ class StructuralDistance:
             return dist
         return dist + self.__call__(u, v, k-1, k_hop_u, k_hop_v)   
 
-
+def get_dist_fn(k = 3, num_node = 4845550):
+    edges = load()
+    adjacency = generate_adjacency_matrix(edges, num_node)
+    node_degree = get_node_degree (edges)
+    return StructuralDistance(adjacency, node_degree, k)
+    
+    
 def main():
-    """
-    file_paths=[]
-    for i in range(4):
-        file_paths.append("./dblp-ref/dblp-ref-"+str(i)+".json")
-    #preprocess.process_json(file_paths)
-    process_json2(file_paths)
-    ######################################################
-    The code above needs discussion.
-    """
     u=1
     v=2
     k=3
-    
-    edges = load()
     num_node = 4845550
     
-    adjacency = generate_adjacency_matrix(edges, num_node)
-    node_degree = get_node_degree (edges)
-    
-    dist_fn = StructuralDistance(adjacency, node_degree, k)
+    dist_fn = get_dist_fn(k = 3, num_node = 4845550)
+    #dist_fn = StructuralDistance(adjacency, node_degree, k)
     dist = dist_fn(u, v)
     print(dist)
 
