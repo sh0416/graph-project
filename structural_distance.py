@@ -94,6 +94,7 @@ def generate_adjacency_matrix(edges, size):
     adjacency = csr_matrix((data, (rows, cols)))
     return adjacency
 
+
 def get_node_degree (edges): 
     dic = {}
     for p, a, _ in tqdm(edges, desc="compute node degree"):
@@ -118,21 +119,6 @@ def load():
     with open('node2index.pickle', 'rb') as fr:
         dic = pickle.load(fr)
     return edges, dic
-
-"""
-The function get_degree() needs discussion.
-"""
-#################################################################################################
-def get_degree(adjacency, v, memo = {}):
-    return node_degree[v]
-    
-    
-    if v in memo.keys():
-        degree = memo[v]
-    else:
-        degree = sum(adjacency[v].toarray()[0])
-        memo[v] = degree
-    return degree
 
 
 def get_neighborhood(adjacency, v):
