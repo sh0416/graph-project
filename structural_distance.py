@@ -109,16 +109,14 @@ def get_node_degree (edges):
     return dic
 
 def load():
-    file_path = './edges.csv'
-    edges = []
-    with open(file_path, 'r') as f: 
-        for line in tqdm(f, desc="load edges"):
-            [p, a, l] = line.replace('\n','').split(',')
-            edges.append((int(float(p)), int(float(a)), int(float(l))))
-    # load dict
-    with open('node2index.pickle', 'rb') as fr:
-        dic = pickle.load(fr)
-    return edges, dic
+    with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
+        reader = csv.reader(f)
+        mapping = {row[1]: int(row[0]) for row in tqdm(reader)}
+
+    with open('edges.csv', 'r', newline='', encoding='utf8') as f: 
+        reader = csv.reader(f)
+        edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader)]
+    return edges
 
 
 class StructuralDistance:
@@ -207,21 +205,21 @@ class StructuralDistance:
 
 
 def main():
+    """
     file_paths=[]
     for i in range(4):
         file_paths.append("./dblp-ref/dblp-ref-"+str(i)+".json")
     #preprocess.process_json(file_paths)
     process_json2(file_paths)
     ######################################################
-    """
     The code above needs discussion.
     """
     u=1
     v=2
     k=3
     
-    edges, dic = load()
-    num_node = int(len(dic)/2)
+    edges = load()
+    num_node = 4845550
     
     adjacency = generate_adjacency_matrix(edges, num_node)
     node_degree = get_node_degree (edges)
