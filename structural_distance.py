@@ -82,7 +82,7 @@ def generate_adjacency_matrix(edges, size):
     rows = [size - 1]
     cols = [size - 1]
     data = [0]
-    for p, a, _ in edges:
+    for p, a, _ in tqdm(edges, desc="generate adjacency matrix"):
         rows.append(p)
         rows.append(a)
         
@@ -94,13 +94,25 @@ def generate_adjacency_matrix(edges, size):
     adjacency = csr_matrix((data, (rows, cols)))
     return adjacency
 
+def get_node_degree (edges): 
+    dic = {}
+    for p, a, _ in tqdm(edges, desc="compute node degree"):
+        if p in dic.keys():
+            dic[p] += 1
+        else:
+            dic[p]= 1
+        if a in dic.keys():
+            dic[a] += 1
+        else:
+            dic[a]= 1
+    return dic
 
 def load():
+    file_path = './edges.csv'
     edges = []
-    with open("edges.csv", 'r', newline='', encoding='utf8') as f:
-        reader = csv.reader(f)
-        for row in tqdm(reader, desc="load edge"):
-            [p, a, l] = row
+    with open(file_path, 'r') as f: 
+        for line in tqdm(f, desc="load edges"):
+            [p, a, l] = line.replace('\n','').split(',')
             edges.append((int(float(p)), int(float(a)), int(float(l))))
     # load dict
     with open('node2index.pickle', 'rb') as fr:
@@ -112,6 +124,9 @@ The function get_degree() needs discussion.
 """
 #################################################################################################
 def get_degree(adjacency, v, memo = {}):
+    return node_degree[v]
+    
+    
     if v in memo.keys():
         degree = memo[v]
     else:
@@ -171,29 +186,30 @@ def DTW(X,Y,
     return cost[-1,-1]
 
 
-def get_ordered_degree_seq(adjacency, neighbor, memo = {}):
+def get_ordered_degree_seq(adjacency, node_degree, neighbors, memo = {}):
     seq = []
-    for i in neighbor:
-        seq.append(get_degree(adjacency, i, memo = memo))
+    for i in neighbors:
+        seq.append(node_degree[i])
+        #seq.append(get_degree(adjacency, i, memo = memo))
     seq.sort()
     return np.array(seq)
 
 
-def get_structural_distance(adjacency, u, v, k, k_hop_u = None, k_hop_v = None):
+def get_structural_distance(adjacency, node_degree, u, v, k, k_hop_u = None, k_hop_v = None):
     if k_hop_u == None:
         k_hop_u = get_k_hop_neighborhood(adjacency, u, k)
     if k_hop_v == None:
         k_hop_v = get_k_hop_neighborhood(adjacency, v, k)
     
     memo = {}
-    seq_u = get_ordered_degree_seq(adjacency, k_hop_u[k], memo = memo)
-    seq_v = get_ordered_degree_seq(adjacency, k_hop_v[k], memo = memo)
+    seq_u = get_ordered_degree_seq(adjacency, node_degree, k_hop_u[k], memo = memo)
+    seq_v = get_ordered_degree_seq(adjacency, node_degree, k_hop_v[k], memo = memo)
     
     dist = DTW(seq_u, seq_v)
     
     if k == 0:
         return dist
-    return dist + get_structural_distance(adjacency, u, v, k-1, k_hop_u, k_hop_v)   
+    return dist + get_structural_distance(adjacency, node_degree, u, v, k-1, k_hop_u, k_hop_v)   
 
 
 def main():
@@ -214,8 +230,9 @@ def main():
     num_node = int(len(dic)/2)
     
     adjacency = generate_adjacency_matrix(edges, num_node)
+    node_degree = get_node_degree (edges)
     
-    dist = get_structural_distance(adjacency, u, v, k)
+    dist = get_structural_distance(adjacency, node_degree, u, v, k)
     print(dist)
 
 if __name__ == '__main__':
