@@ -15,8 +15,11 @@ def generate_pair(l):
 def generate_triplet(q, i, k = 3, window_size = 3):
     dist_fn = sd.get_dist_fn(k = k)
 
-    with open("random_walks"+str(i)+".csv", 'r', newline='', encoding='utf8') as rf:
+    #with open("random_walks"+str(i)+".csv", 'r', newline='', encoding='utf8') as rf:
+    with open("random_walks.csv", 'r', newline='', encoding='utf8') as rf:
         reader = csv.reader(rf)
+        a=0###
+        num=i
         for row in tqdm(reader, desc="random_walk"):
             for i in range(len(row)-window_size):
                 if len(set(row[i:i+window_size+1])) < 3:
@@ -41,6 +44,8 @@ def generate_triplet(q, i, k = 3, window_size = 3):
                         neg = p1
                     triplet = ','.join([str(anc),str(pos),str(neg)])
                     q.put(triplet)
+            #a=a+1
+            #print(a, num)
     q.put(None)
     q.close()
     
@@ -58,15 +63,15 @@ def write_triplet(q, multi):
             f.write(triplet + '\n')    
 
 def main():
-    k = 3
+    k = 2#3
     window_size = 3    
     #generate_triplet(k = 3, window_size = 3)
     import multiprocessing
-    multi = 8
+    multi = 1
     gen_procs = []
     q = multiprocessing.Queue()
     for i in range(multi):
-        g = multiprocessing.Process(target=generate_triplet, args=(q, i, 3, 3))
+        g = multiprocessing.Process(target=generate_triplet, args=(q, i, k, window_size))
         g.start()
         gen_procs.append(g)
         

@@ -6,16 +6,24 @@ import pickle
 from tqdm import tqdm
 import numpy as np
 
+import numpy as np
+from scipy.spatial.distance import euclidean
+from fastdtw import fastdtw
+
 import preprocess
 from scipy.sparse import csr_matrix
 
+###########################################################################################
+import SoftDTW
+import torch
+###########################################################################################
 
-def load():
+def load(file_name = 'edges.csv'):
     with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
         reader = csv.reader(f)
         mapping = {row[1]: int(row[0]) for row in tqdm(reader, desc="load node")}
-
-    with open('edges.csv', 'r', newline='', encoding='utf8') as f: 
+        
+    with open(file_name, 'r', newline='', encoding='utf8') as f: 
         reader = csv.reader(f)
         edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader, desc="load edge")]
     return edges
@@ -25,6 +33,9 @@ def generate_adjacency_matrix(edges, size):
     rows = [size - 1]
     cols = [size - 1]
     data = [0]
+    rows = []
+    cols = []
+    data = []
     for p, a, _ in tqdm(edges, desc="generate adjacency matrix"):
         rows.append(p)
         rows.append(a)
@@ -57,11 +68,19 @@ class StructuralDistance:
         self.adjacency = adj
         self.node_degree = deg
         self.k = k
-        self.k_hop = {}
+        #####################################################################
+        self.dist_fn = SoftDTW.SoftDTW().eval()
+        self.dist_dic = {}
+        ##############################################################
+        self.a=self.adjacency.dot(self.adjacency)
+        
+        #self.construct_dist_dic()
     
     
-    def get_neighborhood(self, v):
-        return np.nonzero(self.adjacency[v].toarray()[0])[0]
+    def get_neighborhood(self, v, adjacency = None):
+        if adjacency == None:
+            adjacency = self.adjacency
+        return np.nonzero(adjacency[v].toarray()[0])[0]
     
     
     """
@@ -69,11 +88,12 @@ class StructuralDistance:
     output[n]: n hop neighborhood
     """
     def get_k_hop_neighborhood(self, v):
-        try:
-            return self.k_hop[v]
-        except:
-            pass
         k_hop_neighborhood = {0: set([v])}
+        k_hop_neighborhood[1] = set(self.get_neighborhood(v).tolist())
+        all_neighborhood = set([v]).union(set(self.get_neighborhood(v).tolist()))
+        k_hop_neighborhood[2] = set(self.get_neighborhood(v,self.a).tolist()) - all_neighborhood
+        return k_hop_neighborhood
+        ####################
         all_neighborhood = set([v])
         for i in range(self.k):
             prev_neighborhood = k_hop_neighborhood[i]
@@ -85,9 +105,7 @@ class StructuralDistance:
             if len(k_hop_neighborhood[i+1]) == 0:
                 for j in range(i,self.k):
                     k_hop_neighborhood[j+1] = set()
-                self.k_hop[v] = k_hop_neighborhood
-                return k_hop_neighborhood
-        self.k_hop[v] = k_hop_neighborhood    
+                return k_hop_neighborhood  
         return k_hop_neighborhood
 
 
@@ -127,8 +145,13 @@ class StructuralDistance:
     
         
     def __call__(self, u, v, k = None, k_hop_u = None, k_hop_v = None):
+        update = 0
         if k == None:
-            k = self.k
+            try:
+                return self.dist_dic[(u,v)]
+            except:
+                update = 1
+                k = self.k
         if k_hop_u == None:
             k_hop_u = self.get_k_hop_neighborhood(u)
         if k_hop_v == None:
@@ -137,14 +160,22 @@ class StructuralDistance:
         seq_u = self.get_ordered_degree_seq(k_hop_u[k])
         seq_v = self.get_ordered_degree_seq(k_hop_v[k])
 
-        dist = self.DTW(seq_u, seq_v)
+        dist = self.dist_fn(torch.Tensor(seq_u).view(1,-1,1),torch.Tensor(seq_v).view(1,-1,1))
+        #dist = self.DTW(seq_u, seq_v)
+        #dist, _ = fastdtw(np.array(seq_u), np.array(seq_v), dist=euclidean)
 
         if k == 0:
             return dist
+        if update == 1:
+            d = dist + self.__call__(u, v, k-1, k_hop_u, k_hop_v)
+            self.dist_dic[(u,v)] = d
+            self.dist_dic[(v,u)] = d
+            return d
         return dist + self.__call__(u, v, k-1, k_hop_u, k_hop_v)   
 
-def get_dist_fn(k = 3, num_node = 4845550):
-    edges = load()
+def get_dist_fn(edges = None, k = 3, num_node = 4845550):
+    if edges == None:
+        edges = load()
     adjacency = generate_adjacency_matrix(edges, num_node)
     node_degree = get_node_degree (edges)
     return StructuralDistance(adjacency, node_degree, k)
