@@ -9,13 +9,13 @@ import numpy as np
 import preprocess
 from scipy.sparse import csr_matrix
 
+###########################################################################################
+import SoftDTW
+import torch
+###########################################################################################
 
-def load():
-    with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
-        reader = csv.reader(f)
-        mapping = {row[1]: int(row[0]) for row in tqdm(reader, desc="load node")}
-
-    with open('edges.csv', 'r', newline='', encoding='utf8') as f: 
+def load(file_name = 'edges.csv'):
+    with open(file_name, 'r', newline='', encoding='utf8') as f: 
         reader = csv.reader(f)
         edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader, desc="load edge")]
     return edges
@@ -57,7 +57,8 @@ class StructuralDistance:
         self.adjacency = adj
         self.node_degree = deg
         self.k = k
-        self.k_hop = {}
+        #####################################################################
+        self.dist_fn = SoftDTW.SoftDTW().eval()
     
     
     def get_neighborhood(self, v):
@@ -69,10 +70,6 @@ class StructuralDistance:
     output[n]: n hop neighborhood
     """
     def get_k_hop_neighborhood(self, v):
-        try:
-            return self.k_hop[v]
-        except:
-            pass
         k_hop_neighborhood = {0: set([v])}
         all_neighborhood = set([v])
         for i in range(self.k):
@@ -85,9 +82,7 @@ class StructuralDistance:
             if len(k_hop_neighborhood[i+1]) == 0:
                 for j in range(i,self.k):
                     k_hop_neighborhood[j+1] = set()
-                self.k_hop[v] = k_hop_neighborhood
-                return k_hop_neighborhood
-        self.k_hop[v] = k_hop_neighborhood    
+                return k_hop_neighborhood  
         return k_hop_neighborhood
 
 
@@ -137,14 +132,16 @@ class StructuralDistance:
         seq_u = self.get_ordered_degree_seq(k_hop_u[k])
         seq_v = self.get_ordered_degree_seq(k_hop_v[k])
 
-        dist = self.DTW(seq_u, seq_v)
+        dist = self.dist_fn(torch.Tensor(seq_u).view(1,-1,1),torch.Tensor(seq_v).view(1,-1,1))
+        #ist = self.DTW(seq_u, seq_v)
 
         if k == 0:
             return dist
         return dist + self.__call__(u, v, k-1, k_hop_u, k_hop_v)   
 
-def get_dist_fn(k = 3, num_node = 4845550):
-    edges = load()
+def get_dist_fn(edges = None, k = 3, num_node = 4845550):
+    if edges == None:
+        edges = load(file_name)
     adjacency = generate_adjacency_matrix(edges, num_node)
     node_degree = get_node_degree (edges)
     return StructuralDistance(adjacency, node_degree, k)
