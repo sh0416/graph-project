@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=1000)
     parser.add_argument("--batch_size", type=int, default=2048)
     parser.add_argument("--eval_every", type=int, default=100)
+    parser.add_argument("--embedding_path", type=str, required=True)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -62,7 +63,7 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, drop_last=False)
 
-    embeddings = get_embedding_from_ckpt("model_020000.pt")
+    embeddings = get_embedding_from_ckpt(args.embedding_path)
     model = LinearModel(embeddings) 
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
