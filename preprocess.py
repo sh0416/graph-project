@@ -2,6 +2,7 @@ import os
 import csv
 import json
 import argparse
+from collections import Counter
 from tqdm import tqdm
 
 def get_index (dic, key):    
@@ -15,25 +16,19 @@ def get_index (dic, key):
     return index
 
 
-
-def create_row(line):
-    """
-    :param line:
-    :type line: str
-    :return: {"authors": list(str), "id": str}
-    :rtype:
-    """
-    row = json.loads(line)
-    return {"authors": row.get("authors"), "id": row["id"]}
+def load_json_file(filepath):
+    with open(filepath, 'r') as f: 
+        for line in tqdm(f, desc="load file"):
+            yield json.loads(line)
 
 
-def process_json (file_paths):
+def process_json (filepaths):
     edges = []
-    for file_path in file_paths:
-        with open(file_path, 'r') as f: 
-            data = list(filter(lambda x : x["authors"] is not None, (create_row(line) for line in tqdm(f, desc="load file"))))
+    for filepath in filepaths:
+        for row in load_json_file(filepath):
+            if row["venue"] != "Human-Computer Interaction":
+                continue
 
-        for row in tqdm(data, desc="extract edge information"):
             num_authors = len(row["authors"])
             if num_authors == 1:
                 edges.append((row["id"], row["authors"][0], 1))
