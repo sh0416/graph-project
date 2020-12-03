@@ -24,10 +24,14 @@ def load_json_file(filepath):
 
 def process_json (filepaths):
     edges = []
+    venues = Counter()
     for filepath in filepaths:
         for row in load_json_file(filepath):
-            if row["venue"] != "Human-Computer Interaction":
+            if "authors" not in row:
                 continue
+            if row["venue"] != 'IEEE Transactions on Pattern Analysis and Machine Intelligence':
+                continue
+            venues[row["venue"]] += 1
 
             num_authors = len(row["authors"])
             if num_authors == 1:
@@ -46,9 +50,18 @@ def process_json (filepaths):
                     edges.append((row["id"], a, 3))
                 edges.append((row["id"], row["authors"][-1], 0))
 
-    with open("edges.csv", 'w', newline='', encoding='utf8') as f:
+    print(venues.most_common())
+    os.makedirs("prep", exist_ok=True)
+    with open(os.path.join("prep", "edges.csv"), 'w', newline='', encoding='utf8') as f:
         writer = csv.writer(f)
         writer.writerows(tqdm(edges, desc="save to csv"))
+
+    authors = sorted(list(set(row[0] for row in edges)))
+    papers = sorted(list(set(row[1] for row in edges)))
+    with open(os.path.join("prep", "nodes.csv"), 'w', newline='', encoding='utf8') as f:
+        writer = csv.writer(f)
+        writer.writerows(((i, x, "paper") for i, x in tqdm(enumerate(authors, start=1), desc="save paper")))
+        writer.writerows(((i, x, "author") for i, x in tqdm(enumerate(papers, start=1+len(authors)), desc="save author")))
 
 
 def main():
