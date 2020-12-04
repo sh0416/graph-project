@@ -18,16 +18,6 @@ import SoftDTW
 import torch
 ###########################################################################################
 
-def load(file_name = 'edges.csv'):
-    with open("nodes.csv", 'r', newline='', encoding='utf8') as f:
-        reader = csv.reader(f)
-        mapping = {row[1]: int(row[0]) for row in tqdm(reader, desc="load node")}
-        
-    with open(file_name, 'r', newline='', encoding='utf8') as f: 
-        reader = csv.reader(f)
-        edges = [(mapping[row[0]], mapping[row[1]], int(row[2])) for row in tqdm(reader, desc="load edge")]
-    return edges
-
 
 def generate_adjacency_matrix(edges, size):
     rows = [size - 1]
@@ -173,9 +163,7 @@ class StructuralDistance:
             return d
         return dist + self.__call__(u, v, k-1, k_hop_u, k_hop_v)   
 
-def get_dist_fn(edges = None, k = 3, num_node = 4845550):
-    if edges == None:
-        edges = load()
+def get_dist_fn(edges, k = 3, num_node = 4845550):
     adjacency = generate_adjacency_matrix(edges, num_node)
     node_degree = get_node_degree (edges)
     return StructuralDistance(adjacency, node_degree, k)
