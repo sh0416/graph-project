@@ -43,8 +43,22 @@ class SkipGramNegativeSampleModel(nn.Module):
         return self.criterion(torch.cat([pos.view(-1), neg.view(-1)], dim=0),
                               torch.cat([pos_label.view(-1), neg_label.view(-1)], dim=0))
 
-        
 
+class TripletBCEEmbeddingModel(nn.Module):
+    def __init__(self, n_nodes, n_dims):
+        super().__init__()
+        self.embed = nn.Embedding(n_nodes, n_dims)
+        self.criterion = nn.BCEWithLogitsLoss()
+
+    def forward(self, anc, pos, neg):
+        anc, pos, neg = self.embed(anc), self.embed(pos), self.embed(neg)
+        pos = torch.bmm(anc[:, None, :], pos[:, :, None])[:, 0, 0]
+        neg = torch.bmm(anc[:, None, :], neg[:, :, None])[:, 0, 0]
+        pos_label = torch.ones_like(pos)
+        neg_label = torch.zeros_like(neg)
+        return self.criterion(torch.cat([pos, neg], dim=0),
+                              torch.cat([pos_label, neg_label], dim=0))
+        
 
 class TripletEmbeddingModel(nn.Module):
     def __init__(self, n_nodes, n_dims):
@@ -76,7 +90,8 @@ def main():
     if args.model == "node2vec":
         model = SkipGramNegativeSampleModel(12617, args.n_dims, 4)
     else:
-        model = TripletEmbeddingModel(12617, args.n_dims) 
+        model = TripletBCEEmbeddingModel(12617, args.n_dims) 
+        #model = TripletEmbeddingModel(12617, args.n_dims) 
     model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     writer = SummaryWriter()
@@ -100,8 +115,8 @@ def main():
                 optimizer.step()
                 step += 1
                 if step % args.save_every == 0:
-                    torch.save(model.state_dict(), os.path.join("ckpt", "%s_%06d.pt" % (args.model, step)))
-
+                    torch.save(model.state_dict(), os.path.join("ckpt", "%s_%d_%06d.pt" % (args.model, args.n_dims, step)))
+    writer.close()
 
 if __name__ == "__main__":
     main()

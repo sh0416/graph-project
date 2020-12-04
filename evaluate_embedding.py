@@ -99,6 +99,7 @@ def main():
                                 valid_tbar.set_postfix(acc="%.4f" % (correct/count))
                             writer.add_scalar('eval/model_acc', correct/count, step)
                     model.train()
+    writer.close()
 
 
 if __name__ == "__main__":

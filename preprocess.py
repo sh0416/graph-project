@@ -12,7 +12,7 @@ def load_json_file(filepath):
             yield json.loads(line)
 
 
-def process_json (filepaths):
+def process_json(filepaths, output_dir):
     edges = []
     venues = Counter()
     for filepath in filepaths:
@@ -41,14 +41,14 @@ def process_json (filepaths):
                 edges.append((row["id"], row["authors"][-1], 0))
 
     print(venues.most_common())
-    os.makedirs("prep", exist_ok=True)
-    with open(os.path.join("prep", "edges.csv"), 'w', newline='', encoding='utf8') as f:
+    os.makedirs(output_dir, exist_ok=True)
+    with open(os.path.join(output_dir, "edges.csv"), 'w', newline='', encoding='utf8') as f:
         writer = csv.writer(f)
         writer.writerows(tqdm(edges, desc="save to csv"))
 
     authors = sorted(list(set(row[0] for row in edges)))
     papers = sorted(list(set(row[1] for row in edges)))
-    with open(os.path.join("prep", "nodes.csv"), 'w', newline='', encoding='utf8') as f:
+    with open(os.path.join(output_dir, "nodes.csv"), 'w', newline='', encoding='utf8') as f:
         writer = csv.writer(f)
         writer.writerows(((i, x, "paper") for i, x in tqdm(enumerate(authors, start=1), desc="save paper")))
         writer.writerows(((i, x, "author") for i, x in tqdm(enumerate(papers, start=1+len(authors)), desc="save author")))
@@ -65,13 +65,14 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", type=str)
+    parser.add_argument("--prep_dir", type=str, default="prep")
     args = parser.parse_args()
 
     file_paths = []
     for i in range(4):
         file_paths.append(os.path.join(args.data_dir, "dblp-ref-"+str(i)+".json"))
 
-    process_json(file_paths)
+    process_json(file_paths, args.prep_dir)
     print('finish') 
 
 
