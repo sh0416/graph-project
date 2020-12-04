@@ -1,6 +1,5 @@
 import csv
 from tqdm import tqdm
-import numpy as np
 
 import structural_distance as sd
 
@@ -26,17 +25,27 @@ def generate_triplet(q, i, k = 3, window_size = 3):
                 if len(set(row[i:i+window_size+1])) < 3:
                     continue
                 anc = int(row[i])
-                nodes = np.array([])
-                node_dists = ([])
+                node_dists = []
                 for n in set(row[i+1:i+window_size+1]):
-                    if anc != int(n):                        
+                    if anc != int(n):
                         d = dist_fn(anc, int(n))
-                        nodes = np.append(nodes,str(n))
-                        node_dists = np.append(node_dists,d)
-                
-                sample = '_'.join(nodes[node_dists.argsort()])
-                triplet = ','.join([str(anc),sample])
-                q.put(triplet)
+                        node_dists.append((int(n),d))
+                pairs = generate_pair(node_dists)
+                for (p1,d1), (p2,d2) in pairs:
+                    if anc == p1 or anc == p2 or p1 == p2:
+                        continue
+                    #d1 = dist_fn(anc, p1)
+                    #d2 = dist_fn(anc, p2)
+                    if d1 < d2:
+                        pos = p1
+                        neg = p2
+                    else:
+                        pos = p2
+                        neg = p1
+                    triplet = ','.join([str(anc),str(pos),str(neg)])
+                    q.put(triplet)
+            #a=a+1
+            #print(a, num)
     q.put(None)
     q.close()
     
@@ -55,7 +64,7 @@ def write_triplet(q, multi):
 
 def main():
     k = 2#3
-    window_size = 7
+    window_size = 3    
     #generate_triplet(k = 3, window_size = 3)
     import multiprocessing
     multi = 1
