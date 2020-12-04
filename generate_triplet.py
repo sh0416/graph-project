@@ -37,20 +37,25 @@ def load_random_walk(filepath):
 def generate_triplet(q, i, k, window_size, data_dir):
     edges = load_edges(data_dir)
     dist_fn = sd.get_dist_fn(edges, k=k)
+    def decorate_cache(f):
+        cache = {}
+        def new_f(u, v):
+            if (u, v) in cache:
+                return cache[u, v]
+            else:
+                cache[u, v] = f(u, v)
+                return cache[u, v]
+        return new_f
+    dist_fn = decorate_cache(dist_fn)
     a, num = 0, i
     for row in load_random_walk(os.path.join(data_dir, "random_walks.csv")):
         for i in range(len(row)-window_size):
-            anc = int(row[i])
-            nodes = np.array([])
-            node_dists = ([])
-            for n in set(row[i+1:i+window_size+1]):
-                if anc != int(n):                        
-                    d = dist_fn(anc, int(n))
-                    nodes = np.append(nodes,str(n))
-                    node_dists = np.append(node_dists,d)
+            window = row[i:i+window_size]
+            source, contexts = window[0], window[1:]
+            structural_distance = [dist_fn(source, context) for context in contexts]
             
-            sample = '_'.join(nodes[node_dists.argsort()])
-            triplet = ','.join([str(anc),sample])
+            sample = ' '.join(map(lambda x: str(x[1]), sorted(zip(structural_distance, contexts))))
+            triplet = ','.join([str(source), sample])
             q.put(triplet)
     q.put(None)
     q.close()
