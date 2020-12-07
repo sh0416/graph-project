@@ -26,9 +26,9 @@ class AuthorRoleClassificationDataset(Dataset):
             random.seed(seed)
             random.shuffle(self.data)
             if is_valid:
-                self.data = self.data[:1000]
+                self.data = self.data[:1500]
             else:
-                self.data = self.data[1000:]
+                self.data = self.data[1500:]
     
     def __getitem__(self, idx):
         return self.data[idx]
@@ -51,15 +51,15 @@ class LinearModel(nn.Module):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--n_dims", type=int, default=16)
-    parser.add_argument("--epochs", type=int, default=1000)
-    parser.add_argument("--batch_size", type=int, default=2048)
+    parser.add_argument("--epochs", type=int, default=5000)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--eval_every", type=int, default=100)
     parser.add_argument("--embedding_path", type=str, required=True)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_dataset = AuthorRoleClassificationDataset(os.path.join("prep", "PAMI"), is_valid=False)
-    valid_dataset = AuthorRoleClassificationDataset(os.path.join("prep", "PAMI"), is_valid=True)
+    train_dataset = AuthorRoleClassificationDataset(os.path.join("prep"), is_valid=False)
+    valid_dataset = AuthorRoleClassificationDataset(os.path.join("prep"), is_valid=True)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
     valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, drop_last=False)
 

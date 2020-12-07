@@ -52,8 +52,8 @@ class TripletBCEEmbeddingModel(nn.Module):
 
     def forward(self, anc, pos, neg):
         anc, pos, neg = self.embed(anc), self.embed(pos), self.embed(neg)
-        pos = torch.bmm(anc[:, None, :], pos[:, :, None])[:, 0, 0]
-        neg = torch.bmm(anc[:, None, :], neg[:, :, None])[:, 0, 0]
+        pos = torch.bmm(anc[:, None, :], pos.transpose(1, 2))[:, 0, :]
+        neg = torch.bmm(anc[:, None, :], neg.transpose(1, 2))[:, 0, :]
         pos_label = torch.ones_like(pos)
         neg_label = torch.zeros_like(neg)
         return self.criterion(torch.cat([pos, neg], dim=0),
@@ -82,9 +82,9 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.model == "node2vec":
-        dataset = FileDataset(os.path.join("prep", "PAMI", "random_walks.csv"))
+        dataset = FileDataset(os.path.join("prep", "random_walks.csv"))
     else:
-        dataset = FileDataset(os.path.join("prep", "PAMI", "triplet.csv"))
+        dataset = FileDataset(os.path.join("prep", "triplet.csv"))
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=True)
 
     if args.model == "node2vec":
@@ -102,12 +102,12 @@ def main():
                 if args.model == "node2vec":
                     batch = torch.from_numpy(np.fromstring(','.join(batch), dtype=np.int64, sep=',')).view(args.batch_size, 101)
                 else:
-                    batch = torch.from_numpy(np.fromstring(','.join(batch), dtype=np.int64, sep=',')).view(args.batch_size, 3)
+                    batch = torch.from_numpy(np.fromstring(','.join(batch).replace(' ', ','), dtype=np.int64, sep=',')).view(args.batch_size, 7)
                 batch = batch.to(device)
                 if args.model == "node2vec":
                     loss = model(batch)
                 else:
-                    loss = model(batch[:, 0], batch[:, 1], batch[:, 2])
+                    loss = model(batch[:, 0], batch[:, 1:4], batch[:, 4:7])
                 train_tbar.set_postfix(loss="%.4f" % loss)
                 writer.add_scalar('train/loss', loss, step)
                 optimizer.zero_grad()

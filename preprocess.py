@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import pprint
 import argparse
 from collections import Counter
 from tqdm import tqdm
@@ -19,32 +20,43 @@ def process_json(filepaths, output_dir):
         for row in load_json_file(filepath):
             if "authors" not in row:
                 continue
-            if row["venue"] != 'IEEE Transactions on Pattern Analysis and Machine Intelligence':
+            if row["venue"] not in ['computer science logic', 'frontiers of combining systems']:
                 continue
+
             venues[row["venue"]] += 1
 
             num_authors = len(row["authors"])
             if num_authors == 1:
-                edges.append((row["id"], row["authors"][0], 1))
+                edges.append((row["id"], row["authors"][0], 1, row["venue"]))
             elif num_authors == 2:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 0))
-            elif num_authors == 3:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 2))
-                edges.append((row["id"], row["authors"][2], 0))
+                edges.append((row["id"], row["authors"][0], 1, row["venue"]))
+                edges.append((row["id"], row["authors"][1], 0, row["venue"]))
             else:
-                edges.append((row["id"], row["authors"][0], 1))
-                edges.append((row["id"], row["authors"][1], 2))
-                for a in row["authors"][2:-1]:
-                    edges.append((row["id"], a, 3))
-                edges.append((row["id"], row["authors"][-1], 0))
+                for a in row["authors"][:-1]:
+                    edges.append((row["id"], a, 1, row["venue"]))
+                edges.append((row["id"], row["authors"][-1], 0, row["venue"]))
 
-    print(venues.most_common())
+    # computer science logic
+    """
+    for edge in edges:
+        if edge[3] == 'frontiers of combining systems':
+            author = edge[1]
+
+    for edge in edges:
+        if edge[1] == author:
+            print(edge[3])
+            """
+    """
+
+    with open("venue.csv", 'w', newline='', encoding='utf8') as f:
+        writer = csv.writer(f)
+        writer.writerows(venues.most_common())
+    """
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, "edges.csv"), 'w', newline='', encoding='utf8') as f:
         writer = csv.writer(f)
         writer.writerows(tqdm(edges, desc="save to csv"))
+
 
     authors = sorted(list(set(row[0] for row in edges)))
     papers = sorted(list(set(row[1] for row in edges)))
