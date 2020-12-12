@@ -26,9 +26,9 @@ class AuthorRoleClassificationDataset(Dataset):
             random.seed(seed)
             random.shuffle(self.data)
             if is_valid:
-                self.data = self.data[:1500]
+                self.data = self.data[:200]
             else:
-                self.data = self.data[1500:]
+                self.data = self.data[200:]
     
     def __getitem__(self, idx):
         return self.data[idx]
@@ -42,7 +42,7 @@ class LinearModel(nn.Module):
         super().__init__()
         _, n_dims = embeddings.shape
         self.embed = nn.Embedding.from_pretrained(embeddings, freeze=True)
-        self.w = nn.Linear(2*n_dims, 4)
+        self.w = nn.Linear(2*n_dims, 2)
 
     def forward(self, a, p):
         return self.w(torch.cat([self.embed(a), self.embed(p)], dim=1))
@@ -67,8 +67,9 @@ def main():
     model = LinearModel(embeddings) 
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=0)
     writer = SummaryWriter()
+    writer.add_embedding(embeddings)
     step = 0
     for epoch in range(args.epochs):
         with tqdm(train_loader, desc="Epoch %d" % epoch, ncols=100) as train_tbar:

@@ -67,7 +67,13 @@ class TripletEmbeddingModel(nn.Module):
         self.criterion = nn.TripletMarginLoss()
 
     def forward(self, a, p, n):
-        return self.criterion(self.embed(a), self.embed(p), self.embed(n))
+        a, p, n = self.embed(a), self.embed(p), self.embed(n)
+        loss = self.criterion(a, p[:, 0, :], p[:, 1, :])
+        loss += self.criterion(a, p[:, 1, :], p[:, 2, :])
+        loss += self.criterion(a, p[:, 2, :], n[:, 0, :])
+        loss += self.criterion(a, n[:, 0, :], n[:, 1, :])
+        loss += self.criterion(a, n[:, 1, :], n[:, 2, :])
+        return loss
 
 
 def main():
@@ -90,8 +96,8 @@ def main():
     if args.model == "node2vec":
         model = SkipGramNegativeSampleModel(12617, args.n_dims, 4)
     else:
-        model = TripletBCEEmbeddingModel(12617, args.n_dims) 
-        #model = TripletEmbeddingModel(12617, args.n_dims) 
+        #model = TripletBCEEmbeddingModel(12617, args.n_dims) 
+        model = TripletEmbeddingModel(12617, args.n_dims) 
     model = model.to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     writer = SummaryWriter()

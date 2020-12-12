@@ -16,7 +16,8 @@ from scipy.sparse import csr_matrix
 ###########################################################################################
 import SoftDTW
 import torch
-from fastdtw import fastdtw
+#from fastdtw import fastdtw
+from dtw import accelerated_dtw
 ###########################################################################################
 
 
@@ -71,18 +72,16 @@ class StructuralDistance:
         k = self.k if k is None else k
         seq_u = self.sorted_degree_matrix_list[k][u].data
         seq_v = self.sorted_degree_matrix_list[k][v].data
-        
-        #if len(seq_v) + len(seq_u) > 4:
-        #    print(len(seq_u), len(seq_v))
-        #dist, _ = fastdtw(seq_u, seq_v, dist=euclidean)
-        with torch.no_grad():
-            dist = self.dist_fn(torch.tensor(seq_u).view(1,-1,1),
-                                torch.tensor(seq_v).view(1,-1,1))
+        result = accelerated_dtw(seq_u, seq_v, 'euclidean')
+        dist = result[0]
+        assert dist >= 0, 'dist: %.4f, %s_%s' % (dist, str(seq_u), str(seq_v))
         if k == 0:
             return dist
         elif k == self.k:
-            self.dist_dic[u, v] = dist + self.__call__(u, v, k-1)   
-            return self.dist_dic[u, v]
+            r = dist + self.__call__(u, v, k-1)
+            self.dist_dic[u, v] = r
+            self.dist_dic[v, u] = r
+            return r
         else:
             return dist + self.__call__(u, v, k-1)
 

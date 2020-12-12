@@ -35,6 +35,7 @@ def generate_triplet(q, i, k, window_size, data_dir):
             window = row[i:i+window_size]
             source, contexts = window[0], window[1:]
             structural_distance = [dist_fn(source, context) for context in contexts]
+            #print(structural_distance)
             
             sample = ' '.join(map(lambda x: str(x[1]), sorted(zip(structural_distance, contexts))))
             triplet = ','.join([str(source), sample])
